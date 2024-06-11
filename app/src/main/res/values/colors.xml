@@ -5,4 +5,9 @@
     <color name="color_primary">#0054FD</color>
     <color name="color_delete">#FD0000</color>
     <color name="color_gray">#AAAAAA</color>
+    <color name="class_a">#C800FF</color>
+    <color name="class_b">#0048FF</color>
+    <color name="class_c">#30B500</color>
+    <color name="class_d">#676767</color>
+    <color name="class_f">#FF0000</color>
 </resources>

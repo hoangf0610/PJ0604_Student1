@@ -1,8 +1,14 @@
 package com.example.pj0604_student1.fragment
 
 import android.annotation.SuppressLint
+import android.app.AlertDialog
 import android.content.Context
+import android.content.DialogInterface
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -19,6 +25,7 @@ import com.example.pj0604_student1.databinding.FragmentCreateBinding
 import com.example.pj0604_student1.databinding.FragmentUpdateBinding
 import com.example.pj0604_student1.model.Student
 import com.example.pj0604_student1.model.Subject
+import java.io.InputStream
 
 @Suppress("DEPRECATION")
 class UpdateFragment : Fragment(R.layout.fragment_update) {
@@ -29,11 +36,6 @@ class UpdateFragment : Fragment(R.layout.fragment_update) {
         const val TAG = "UpdateFragment"
     }
 
-    interface OnUpdateStudent {
-        fun onUpdateStudent(student: Student)
-    }
-
-    private var listener: OnUpdateStudent? = null
     lateinit var studentAdapter: StudentAdapter
     lateinit var subjectAdapter: SubjectAdapter
     private lateinit var studentSelected: Student
@@ -49,20 +51,6 @@ class UpdateFragment : Fragment(R.layout.fragment_update) {
         }
     }
 
-    override fun onAttach(context: Context) {
-        super.onAttach(context)
-        if (context is OnUpdateStudent) {
-            listener = context
-        } else {
-            throw RuntimeException("$context must implement OnCreateStudent")
-        }
-    }
-
-    override fun onDetach() {
-        super.onDetach()
-        listener = null
-    }
-
     @SuppressLint("NotifyDataSetChanged")
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -72,20 +60,29 @@ class UpdateFragment : Fragment(R.layout.fragment_update) {
         _binding = FragmentUpdateBinding.inflate(inflater, container, false)
         val view = binding.root
 
-        val img = arguments?.getInt("img") ?: 0
+        val img = arguments?.getString("img") ?: ""
         val name = arguments?.getString("name") ?: ""
         val age = arguments?.getInt("age") ?: 0
         val point = arguments?.getDouble("point") ?: 0.0
         val gender = arguments?.getString("gender") ?: "gender"
         val subject = arguments?.getInt("subject") ?: 0
         val subjectList = arguments?.getParcelableArrayList("subjectList") ?: arrayListOf<Subject>()
+        val rank = arguments?.getInt("rank") ?: 0
+        val classStudent = arguments?.getString("classStudent") ?: "F"
 
-        studentSelected = Student(img,name,age,point,gender,subject, subjectList)
+        studentSelected = Student(img,name,age,point,gender,subject, subjectList, rank, classStudent)
 
-        binding.imgStudent.setImageResource(studentSelected.img)
+        val uri: Uri = Uri.parse(studentSelected.img)
+        val inputStream: InputStream? = binding.imgStudent.context.contentResolver.openInputStream(uri)
+        val bitmap: Bitmap? = BitmapFactory.decodeStream(inputStream)
+        bitmap?.let {
+            binding.imgStudent.setImageBitmap(it)
+        }
         binding.edtName.setText(studentSelected.name)
         binding.edtAge.setText(studentSelected.age.toString())
         binding.tvPoint.setText(studentSelected.point.toString())
+        binding.tvRank.setText(studentSelected.rank.toString())
+        binding.tvClass.setText(studentSelected.classStudent)
 
         binding.imgStudent.setOnClickListener {galleryLauncher.launch("image/*")}
 
@@ -101,15 +98,17 @@ class UpdateFragment : Fragment(R.layout.fragment_update) {
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
 
-//
+
         studentAdapter = StudentAdapter(MainActivity.studentList, object : StudentAdapter.OnItemClicked {
             override fun onItemClicked(student: Student, position: Int) {}
+            override fun onDeleteClicked(student: Student, position: Int) {}
         })
 
         subjectAdapter = SubjectAdapter(subjectList, object : SubjectAdapter.OnItemClicked {
             @SuppressLint("DefaultLocale")
-            override fun onItemClicked(subjectList: MutableList<Subject>, position: Int, gpa: Double) {
+            override fun onItemClicked(subjectList: MutableList<Subject>, position: Int, gpa: Double, classStudent: String) {
                 binding.tvPoint.setText(String.format("%.2f",gpa))
+                binding.tvClass.setText(classStudent)
             }
         })
 
@@ -132,20 +131,38 @@ class UpdateFragment : Fragment(R.layout.fragment_update) {
             val name = binding.edtName.text.toString()
             val age = binding.edtAge.text.toString().toIntOrNull() ?: 0
             val point = binding.tvPoint.text.toString().toDoubleOrNull() ?: 0.0
-            val img = studentSelected.img
+            val img = uri.toString()
             val gender = binding.spGender.selectedItem.toString()
             val subject = studentSelected.subject
+            val rank = 0
+            val classStudent = binding.tvClass.text.toString()
 
-            val newStudent = Student(img, name, age, point, gender, subject, subjectList)
-            listener?.onUpdateStudent(newStudent)
-            MainActivity.studentList.removeAt(AllFragment.indexSelected)
+            val newStudent = Student(img, name, age, point, gender, subject, subjectList, rank, classStudent)
+
+            (activity as MainActivity).studentLiveData.value = newStudent
+            (activity as MainActivity).sortRank()
+//            Log.i("s", MainActivity.studentList.toString())
             studentAdapter.notifyDataSetChanged()
+            AllFragment.arrayClass = (activity as MainActivity).countClassStudent()
             parentFragmentManager.popBackStack()
         }
 
         binding.btnDelete.setOnClickListener {
-            MainActivity.studentList.removeAt(AllFragment.indexSelected)
-            studentAdapter.notifyDataSetChanged()
+            val builder = activity?.let { AlertDialog.Builder(it) }
+            if (builder != null) {
+                builder.setPositiveButton("Yes",
+                    DialogInterface.OnClickListener { dialog, which ->
+                        MainActivity.studentList.removeAt(AllFragment.indexSelected)
+                        studentAdapter.notifyDataSetChanged()
+                        AllFragment.arrayClass = (activity as MainActivity).countClassStudent()
+                        parentFragmentManager.popBackStack()
+                    })
+                    .setNegativeButton("No",
+                        DialogInterface.OnClickListener { dialog, which -> })
+                    .setMessage("Do you want to delete " + "${MainActivity.studentList[AllFragment.indexSelected].name}")
+                builder.show()
+            }
+
         }
 
         return view

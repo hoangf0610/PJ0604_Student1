@@ -22,12 +22,13 @@ class SubjectAdapter(var subjectList: MutableList<Subject>, var listener: Subjec
     }
 
     interface OnItemClicked {
-        fun onItemClicked(subjectList: MutableList<Subject>, position: Int, gpa: Double)
+        fun onItemClicked(subjectList: MutableList<Subject>, position: Int, gpa: Double, classStudent: String)
     }
 
     val subjectData = mutableListOf<Subject>()
     private val detailFragment = CreateFragment()
     var gpa: Double = 0.0
+    var classStudent: String = ""
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SubjectViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.subject_item,parent,false)
         return SubjectViewHolder(view)
@@ -45,7 +46,8 @@ class SubjectAdapter(var subjectList: MutableList<Subject>, var listener: Subjec
         holder.tvDelete.setOnClickListener{
             subjectList.removeAt(position)
             gpa = chargeGPA()
-            listener.onItemClicked(subjectList = subjectList, position, gpa)
+            classStudent = findClass(gpa)
+            listener.onItemClicked(subjectList = subjectList, position, gpa, classStudent)
             notifyDataSetChanged()
         }
 
@@ -58,7 +60,8 @@ class SubjectAdapter(var subjectList: MutableList<Subject>, var listener: Subjec
                     e.printStackTrace()
                 }
                 gpa = chargeGPA()
-                listener.onItemClicked(subjectList = subjectList, position, gpa)
+                classStudent = findClass(gpa)
+                listener.onItemClicked(subjectList = subjectList, position, gpa, classStudent)
             }
             override fun afterTextChanged(s: Editable?) {}
         })
@@ -72,7 +75,8 @@ class SubjectAdapter(var subjectList: MutableList<Subject>, var listener: Subjec
                     e.printStackTrace()
                 }
                 gpa = chargeGPA()
-                listener.onItemClicked(subjectList = subjectList, position, gpa)
+                classStudent = findClass(gpa)
+                listener.onItemClicked(subjectList = subjectList, position, gpa, classStudent)
             }
             override fun afterTextChanged(s: Editable?) {}
         })
@@ -82,6 +86,17 @@ class SubjectAdapter(var subjectList: MutableList<Subject>, var listener: Subjec
         val sum = subjectList.sumOf { it.pointSubject }
         gpa = if(subjectList.isNotEmpty()) sum.toDouble()/ subjectList.size else 0.0
         return gpa
+    }
+
+    fun findClass (point: Double):String {
+        var classStudent = ""
+        if(point >= 8.5 && point <= 10) classStudent = "A"
+        else if(point >= 7.0 && point < 8.5) classStudent = "B"
+        else if(point >= 5.5 && point < 7.0) classStudent = "C"
+        else if(point >= 4.0 && point < 5.5) classStudent = "D"
+        else if(point >= 0.0 && point < 4.0) classStudent = "F"
+        else classStudent = "--"
+        return classStudent
     }
 
 }

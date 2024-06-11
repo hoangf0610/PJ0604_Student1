@@ -6,32 +6,39 @@ import java.util.ArrayList
 
 
 class Student(
-    var img: Int,
+    var img: String,
     var name: String,
     var age: Int,
-    var point: Double,
+    var point: Double = 0.0,
     var gender: String = "gender",
     var subject: Int = 0,
-    var subjectArray: ArrayList<Subject> = ArrayList()
+    var subjectArray: ArrayList<Subject> = ArrayList(),
+    var rank: Int = 1,
+    var classStudent: String = "A"
 ) : Parcelable {
     constructor(parcel: Parcel) : this(
-        parcel.readInt(),
+        parcel.readString().toString(),
         parcel.readString().toString(),
         parcel.readInt(),
         parcel.readDouble(),
         parcel.readString().toString(),
         parcel.readInt(),
-        parcel.createTypedArrayList(Subject.CREATOR) as ArrayList<Subject>
+        parcel.createTypedArrayList(Subject.CREATOR) as ArrayList<Subject>,
+        parcel.readInt(),
+        parcel.readString().toString()
     ) {
     }
 
     override fun writeToParcel(parcel: Parcel, flags: Int) {
-        parcel.writeInt(img)
+        parcel.writeString(img)
         parcel.writeString(name)
         parcel.writeInt(age)
         parcel.writeDouble(point)
         parcel.writeString(gender)
         parcel.writeInt(subject)
+        parcel.writeTypedList(subjectArray)
+        parcel.writeInt(rank)
+        parcel.writeString(classStudent)
     }
 
     override fun describeContents(): Int {

@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -14,6 +15,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.pj0604_student1.R
+import com.example.pj0604_student1.activity.MainActivity
+import com.example.pj0604_student1.adapter.StudentAdapter
 import com.example.pj0604_student1.adapter.SubjectAdapter
 import com.example.pj0604_student1.databinding.FragmentCreateBinding
 import com.example.pj0604_student1.model.Student
@@ -30,9 +33,12 @@ class CreateFragment : Fragment(R.layout.fragment_create) {
 
     interface OnCreateStudent {
         fun onCreateStudent(student: Student)
+        fun countClassStudent(): IntArray
     }
 
+    var subjectList = arrayListOf<Subject>()
     lateinit var subjectAdapter: SubjectAdapter
+    lateinit var studentAdapter: StudentAdapter
     private var listener: OnCreateStudent? = null
     private lateinit var studentSelected: Student
     private val genders = arrayOf("Male", "Female")
@@ -60,21 +66,14 @@ class CreateFragment : Fragment(R.layout.fragment_create) {
     ): View {
         _binding = FragmentCreateBinding.inflate(inflater, container, false)
         val view = binding.root
-
-        val img = arguments?.getInt("img") ?: 0
-        val name = arguments?.getString("name") ?: ""
-        val age = arguments?.getInt("age") ?: 0
-        val point = arguments?.getDouble("point") ?: 0.0
-        val gender = arguments?.getString("gender") ?: "gender"
-        val subject = arguments?.getInt("subject") ?: 0
-        val subjectList = arguments?.getParcelableArrayList("subjectList") ?: arrayListOf<Subject>()
-
-        studentSelected = Student(img,name,age,point,gender,subject, subjectList)
+        var img = ""
+        var isAllFieldsChecked = false
 
         galleryLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
             uri?.let {
-                // Handle the returned Uri (e.g., display the selected image)
+                // Handle the returned Uri
                 binding.imgStudent.setImageURI(it)
+                img = it.toString()
             }
         }
 
@@ -96,8 +95,9 @@ class CreateFragment : Fragment(R.layout.fragment_create) {
 
         subjectAdapter = SubjectAdapter(subjectList, object : SubjectAdapter.OnItemClicked {
             @SuppressLint("DefaultLocale")
-            override fun onItemClicked(subjectList: MutableList<Subject>, position: Int, gpa: Double) {
+            override fun onItemClicked(subjectList: MutableList<Subject>, position: Int, gpa: Double, classStudent: String) {
                 binding.tvPoint.setText(String.format("%.2f",gpa))
+                binding.tvClass.setText(classStudent)
             }
         })
 
@@ -119,17 +119,44 @@ class CreateFragment : Fragment(R.layout.fragment_create) {
         binding.btnCreate.setOnClickListener {
             val name = binding.edtName.text.toString()
             val age = binding.edtAge.text.toString().toIntOrNull() ?: 0
-            val point = binding.tvPoint.text.toString().toDoubleOrNull() ?: 0.0
-            val img = studentSelected.img
+            val point = binding.tvPoint.text.toString().replace(',', '.').toDoubleOrNull() ?: 0.0
             val gender = binding.spGender.selectedItem.toString()
-            val subject = studentSelected.subject
+            val subject = subjectList.size
+            val rank = 0
+            val classStudent = binding.tvClass.text.toString()
 
-            val newStudent = Student(img, name, age, point, gender, subject, subjectList)
-            listener?.onCreateStudent(newStudent)
-            parentFragmentManager.popBackStack()
+            val newStudent = Student(img, name, age, point, gender, subject, subjectList, rank, classStudent)
+
+            isAllFieldsChecked = CheckAllFields()
+            if (isAllFieldsChecked) {
+                listener?.onCreateStudent(newStudent)
+                AllFragment.arrayClass = (activity as MainActivity).countClassStudent()
+                (activity as MainActivity).sortRank()
+                parentFragmentManager.popBackStack()
+            }
         }
 
         return view
     }
+
+    private fun CheckAllFields(): Boolean {
+//        if (binding.imgStudent.)
+        if (binding.edtName.length() == 0) {
+            binding.edtName.error = "This field is required"
+            return false
+        }
+
+        if (binding.edtAge.length() == 0 || binding.edtAge.text.toString().toInt() <= 0 || binding.edtAge.text.toString().toInt() > 200) {
+            binding.edtAge.error = "This field is required, 0<Age<200"
+            return false
+        }
+        if (binding.tvAddSubject.length() == 0) {
+            binding.tvAddSubject.error = "This field is required"
+            return false
+        }
+        return true
+
+    }
+
 
 }
